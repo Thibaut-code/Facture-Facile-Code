@@ -57,9 +57,7 @@ function home() {
                 <span class="hero-underline" aria-hidden="true"></span>
             </div>
             <div class="hero-art" aria-hidden="true">
-                <span class="hero-handwriting">Un logement bien chauffé,<br>c’est une vie plus douce.</span>
                 <img src="radiateur.png" alt="">
-                <span class="hero-signature">Votre savoir-faire<br>fait la différence !</span>
             </div>
         </section>
         <div class="actions">
