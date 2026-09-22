@@ -48,8 +48,7 @@ function home() {
     const unpaid = docs.filter(d => d.type === 'facture' && !d.paid);
     const paid = docs.filter(d => d.type === 'facture' && d.paid);
     const quotes = docs.filter(d => d.type === 'devis');
-    const name = account?.user_metadata?.display_name?.trim()?.split(/\s+/)[0]
-        || account?.email?.split('@')[0];
+    const name = company.name?.trim();
     return `
         <section class="home-hero">
             <div class="hero-copy">
@@ -126,7 +125,7 @@ function render() {
     if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; return }
     $('#logout').hidden = false;
     $('#headerdate').textContent = new Date().toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    $('#accountname').textContent = account.user_metadata?.display_name || account.email?.split('@')[0] || 'Mon compte';
+    $('#accountname').textContent = company.name?.trim() || 'Mon entreprise';
     const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route && (!a.dataset.filter || a.dataset.filter === filter))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
     if ($('#clientform')) $('#clientform').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), name = f.get('name').trim(), address = f.get('address').trim(); if (!name || !address) { toast('Complétez le nom et l’adresse du client.'); return } saveClient({ name, address, email: f.get('email').trim() }).then(c => { clients.push(c); if (returnToWizard && draft) { draft.client = c.id; go('wizard') } else go('clients'); toast('Client enregistré.') }).catch(showError) };
     if ($('#editclientform')) $('#editclientform').onsubmit = async event => {
@@ -152,7 +151,7 @@ function render() {
             button.disabled = false;
         }
     };
-    if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = values; toast('Coordonnées enregistrées.') }).catch(showError) };
+    if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = values; $('#accountname').textContent = company.name.trim(); toast('Coordonnées enregistrées.') }).catch(showError) };
 }
 window.addEventListener('hashchange', () => {
     render();

@@ -271,3 +271,69 @@ main { max-width: 1640px; padding: 0 clamp(28px, 3vw, 55px) 60px; }
   aside, header, .home-hero, .actions, .stats, .recent-panel { display: none !important; }
   .workspace { background: white; }
 }
+
+/* Titre long et légendes indépendantes du dessin */
+.account-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 42%);
+  align-items: center;
+  min-height: 255px;
+  height: auto;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.hero-copy { min-width: 0; padding-top: 0; align-self: center; }
+.home-hero h1 {
+  white-space: normal;
+  overflow-wrap: break-word;
+  font-size: clamp(2.55rem, 3.6vw, 4.05rem);
+  line-height: 1.06;
+}
+.hero-art {
+  width: 100%;
+  max-width: none;
+  height: 242px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 36% 64%;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  overflow: hidden;
+}
+.hero-art img {
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+.hero-art .hero-handwriting,
+.hero-art .hero-signature {
+  position: static;
+  grid-column: 1;
+  width: 100%;
+  max-width: 100%;
+  z-index: 0;
+  line-height: .95;
+  font-size: clamp(1.1rem, 1.7vw, 1.55rem);
+  transform: rotate(-5deg);
+  padding: 0 8px;
+  overflow-wrap: break-word;
+}
+.hero-art .hero-handwriting { grid-row: 1; }
+.hero-art .hero-signature { grid-row: 2; display: block; }
+@media (max-width: 1200px) {
+  .home-hero { grid-template-columns: minmax(0,1fr) minmax(280px,40%); }
+  .home-hero h1 { font-size: clamp(2.3rem,3.4vw,3.4rem); }
+  .hero-art .hero-handwriting, .hero-art .hero-signature { font-size: 1.15rem; }
+}
+@media (max-width: 900px) {
+  .home-hero { display: block; min-height: 0; margin-bottom: 26px; }
+  .hero-art { display: none; }
+}
+@media (max-width: 760px) {
+  .home-hero h1 { font-size: clamp(2.3rem,8vw,3rem); }
+}
