@@ -31,64 +31,66 @@ function rows(list) {
         </div>`).join('');
 }
 
+function homeTable(list) {
+    if (!list.length) return '<div class="empty">Aucune facture pour le moment.</div>';
+    return `<div class="home-table-scroll"><table class="home-table">
+        <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Description</th><th>Montant</th><th>Statut</th><th><span class="sr-only">Ouvrir</span></th></tr></thead>
+        <tbody>${list.map(d => `<tr>
+            <td>${esc(d.id)}</td><td>${fmt(d.date)}</td><td>${esc(client(d).name)}</td>
+            <td>${esc(d.job)}</td><td>${euro(totals(d).total)}</td>
+            <td><span class="badge ${d.type === 'devis' ? 'quote' : d.paid ? 'paid' : 'pending'}">${d.type === 'devis' ? 'Devis' : d.paid ? 'Payée' : 'En attente'}</span></td>
+            <td><button class="table-open" onclick="go('view/${d.id}')" aria-label="Voir ${esc(d.id)}">•••</button></td>
+        </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
 function home() {
     const unpaid = docs.filter(d => d.type === 'facture' && !d.paid);
     const paid = docs.filter(d => d.type === 'facture' && d.paid);
     const quotes = docs.filter(d => d.type === 'devis');
-    const name = account?.user_metadata?.display_name?.trim()?.split(/\s+/)[0];
+    const name = account?.user_metadata?.display_name?.trim()?.split(/\s+/)[0]
+        || account?.email?.split('@')[0];
     return `
         <section class="home-hero">
             <div class="hero-copy">
-                <span class="eyebrow">Votre atelier, bien organisé</span>
-                <h1>Bonjour${name ? ' ' + esc(name) : ''}<span class="terracotta">.</span></h1>
+                <h1>Bonjour${name ? ' ' + esc(name) : ''},</h1>
                 <p>Prêt pour une nouvelle journée ?</p>
+                <span class="hero-underline" aria-hidden="true"></span>
             </div>
             <div class="hero-art" aria-hidden="true">
-                <span>Plomberie &amp; chauffage</span>
-                <svg viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M88 51h174a8 8 0 0 1 8 8v76a8 8 0 0 1-8 8H88a8 8 0 0 1-8-8V59a8 8 0 0 1 8-8Z"/>
-                        <path d="M103 62v70m25-70v70m25-70v70m25-70v70m25-70v70m25-70v70m25-70v70"/>
-                        <path d="M80 72H49V37h-24m55 87H49v25H25m245-77h23V37h22m-45 87h23v25h22"/>
-                        <circle cx="26" cy="37" r="5"/><circle cx="26" cy="149" r="5"/>
-                    </g>
-                </svg>
+                <span class="hero-handwriting">Un logement bien chauffé,<br>c’est une vie plus douce.</span>
+                <img src="radiateur.png" alt="">
+                <span class="hero-signature">Votre savoir-faire<br>fait la différence !</span>
             </div>
         </section>
         <div class="actions">
-            <button class="action-card main" onclick="start('facture')">
-                <span class="action-icon" aria-hidden="true">▧</span>
-                <span><strong>Créer une facture</strong><small>Les travaux sont terminés ?</small></span>
-                <span class="arrow" aria-hidden="true">→</span>
-            </button>
-            <button class="action-card" onclick="start('devis')">
-                <span class="action-icon" aria-hidden="true">▤</span>
-                <span><strong>Créer un devis</strong><small>Préparez votre prochain chantier.</small></span>
-                <span class="arrow" aria-hidden="true">→</span>
-            </button>
+            <button class="action-card main" onclick="start('facture')"><span class="action-icon" aria-hidden="true">▤</span>
+                <span><strong>Créer une facture</strong></span><span class="arrow" aria-hidden="true">→</span></button>
+            <button class="action-card" onclick="start('devis')"><span class="action-icon" aria-hidden="true">▤</span>
+                <span><strong>Créer un devis</strong></span><span class="arrow" aria-hidden="true">→</span></button>
         </div>
         ${draft ? '<div class="notice">Vous avez un document en cours. <button class="link" onclick="go(\'wizard\')">Reprendre mon brouillon</button></div>' : ''}
         <div class="stats">
             <button class="stat stat-unpaid" onclick="go('payments')">
-                <span class="stat-icon" aria-hidden="true">€</span>
-                <span class="stat-content"><span>À encaisser</span><strong>${euro(unpaid.reduce((sum, d) => sum + totals(d).total, 0))}</strong>
-                <small>${unpaid.length} facture(s) en attente</small></span><span class="stat-arrow" aria-hidden="true">›</span>
+                <span class="stat-icon" aria-hidden="true">▢</span>
+                <span class="stat-content"><span>À encaisser</span><strong>${euro(unpaid.reduce((sum, d) => sum + totals(d).total, 0))}</strong><small>${unpaid.length} facture(s) en attente</small></span>
+                <span class="stat-arrow" aria-hidden="true">›</span>
             </button>
             <button class="stat stat-paid" onclick="go('payments')">
                 <span class="stat-icon" aria-hidden="true">✓</span>
-                <span class="stat-content"><span>Factures payées</span><strong>${euro(paid.reduce((sum, d) => sum + totals(d).total, 0))}</strong>
-                <small>${paid.length} facture(s) encaissée(s)</small></span><span class="stat-arrow" aria-hidden="true">›</span>
+                <span class="stat-content"><span>Factures payées</span><strong>${euro(paid.reduce((sum, d) => sum + totals(d).total, 0))}</strong><small>${paid.length} facture(s) encaissée(s)</small></span>
+                <span class="stat-arrow" aria-hidden="true">›</span>
             </button>
             <button class="stat stat-quotes" onclick="filter='devis';go('docs')">
                 <span class="stat-icon" aria-hidden="true">▤</span>
-                <span class="stat-content"><span>Devis en attente</span><strong>${quotes.length}</strong>
-                <small>À confirmer avec vos clients</small></span><span class="stat-arrow" aria-hidden="true">›</span>
+                <span class="stat-content"><span>Devis en attente</span><strong>${euro(quotes.reduce((sum, d) => sum + totals(d).total, 0))}</strong><small>${quotes.length} devis en attente</small></span>
+                <span class="stat-arrow" aria-hidden="true">›</span>
             </button>
         </div>
-        <div class="recent-panel">
-            <div class="section-head"><h2>Derniers documents</h2><a class="link" href="#docs">Voir tous les documents →</a></div>
-            <div class="panel">${rows(docs.slice(0, 5))}</div>
-        </div>
+        <section class="recent-panel">
+            <div class="section-head"><h2>Dernières factures</h2><a class="link" href="#docs" onclick="filter='facture'">Voir toutes les factures →</a></div>
+            ${homeTable(docs.filter(d => d.type === 'facture').slice(0, 5))}
+        </section>
         <div class="bottom-note"><b>ⓘ</b><span>Vos documents sont enregistrés dans votre compte. Vérifiez les mentions et les taux de TVA avant une utilisation professionnelle.</span></div>`;
 }
 function start(type) { if (draft) { go('wizard'); toast('Votre brouillon est toujours là. Terminez-le ou utilisez « Abandonner ce brouillon ».'); return } draft = { type, client: null, date: today(), due: today(), job: '', lines: [] }; step = 1; go('wizard') }
@@ -123,7 +125,9 @@ function companyView() { return `${intro('Mon entreprise', 'Ces coordonnées app
 function render() {
     if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; return }
     $('#logout').hidden = false;
-    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route || (route.startsWith('view') && a.dataset.nav === 'docs'))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
+    $('#headerdate').textContent = new Date().toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    $('#accountname').textContent = account.user_metadata?.display_name || account.email?.split('@')[0] || 'Mon compte';
+    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route && (!a.dataset.filter || a.dataset.filter === filter))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
     if ($('#clientform')) $('#clientform').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), name = f.get('name').trim(), address = f.get('address').trim(); if (!name || !address) { toast('Complétez le nom et l’adresse du client.'); return } saveClient({ name, address, email: f.get('email').trim() }).then(c => { clients.push(c); if (returnToWizard && draft) { draft.client = c.id; go('wizard') } else go('clients'); toast('Client enregistré.') }).catch(showError) };
     if ($('#editclientform')) $('#editclientform').onsubmit = async event => {
         event.preventDefault();
