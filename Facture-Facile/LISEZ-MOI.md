@@ -1,25 +1,11 @@
-# Facture Facile — Code du prototype
+# Facture Facile avec Supabase
 
-## Ouvrir le site
-1. Décompressez cette archive (clic droit > Extraire tout sous Windows).
-2. Ouvrez le dossier Facture-Facile dans Visual Studio Code.
-3. Double-cliquez sur index.html depuis l’explorateur de fichiers pour ouvrir le site dans votre navigateur.
-4. Après une modification, enregistrez le fichier dans VS Code puis actualisez la page du navigateur.
+1. Exécuter dans Supabase le SQL des tables `companies`, `clients`, `documents`, `document_lines`, puis celui de `profiles` si vous souhaitez les profils utilisateurs.
+2. Dans **Project Settings > API Keys**, relever l'URL du projet et la clé **publishable** (`sb_publishable_...`) ou l'ancienne clé **anon**. Les renseigner dans `config.js`. Ne jamais utiliser de clé **secret** ou **service_role** dans un site GitHub Pages.
+3. Dans **Authentication > Providers > Email**, activer la connexion par e-mail. Dans **Authentication > URL Configuration**, définir l'URL publique GitHub Pages comme `Site URL` et l'ajouter dans `Redirect URLs` (par exemple `https://UTILISATEUR.github.io/DEPOT/`). Conserver la confirmation e-mail si souhaitée.
+4. Mettre `index.html`, `style.css`, `app.js` et `config.js` à la racine du dépôt GitHub Pages, puis ouvrir le site en HTTPS. La bibliothèque Supabase est chargée depuis jsDelivr.
+5. Créer un compte, confirmer l'e-mail si demandé, se connecter et renseigner « Mon entreprise » avant de créer un document.
 
-Aucune installation de Node.js ou compilation n’est nécessaire.
+Les données de démonstration précédentes ne sont pas importées. Les documents existants dans les anciennes sessions n'étaient pas persistés. Le brouillon en cours reste seulement dans la page jusqu'à l'enregistrement.
 
-## Les fichiers
-- index.html : structure de la page et navigation.
-- style.css : couleurs, mise en page, gros caractères et impression.
-- app.js : clients fictifs, devis, factures, calculs et interactions.
-
-## Tester
-Cliquez sur Nouvelle facture, choisissez un client, ajoutez une prestation, puis vérifiez et enregistrez le document d’essai.
-Pour produire un PDF, ouvrez le document puis utilisez Imprimer / PDF et choisissez Enregistrer au format PDF dans la fenêtre du navigateur.
-
-## Limites de cette version
-Les données sont uniquement en mémoire : actualiser ou fermer la page efface les modifications.
-Le code ne contient pas de base de données, d’authentification, d’envoi d’e-mail ou de connexion Peppol.
-Les factures portent la mention document d’essai, sans valeur comptable. Les taux et mentions doivent être validés pour un usage professionnel.
-L’accès privé du site hébergé est fourni par l’hébergement ; cette archive ne contient pas cette protection.
-Les polices Google Fonts nécessitent une connexion Internet. Sans connexion, une police de remplacement est utilisée.
+**Avant d'émettre de vraies factures** : mettre en place une attribution transactionnelle des numéros côté serveur, vérifier les mentions obligatoires et les règles de TVA applicables, puis contrôler les besoins de facturation électronique. Les numéros générés ici dans le navigateur peuvent se heurter entre deux appareils ou être réutilisés après suppression. Le document est enregistré avant ses lignes ; si l'enregistrement des lignes échoue, l'application tente de supprimer le document incomplet.
