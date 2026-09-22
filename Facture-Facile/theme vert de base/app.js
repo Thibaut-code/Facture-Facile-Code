@@ -15,84 +15,10 @@ const client = d => d.customer || clients.find(c => c.id === d.client) || { name
 function toast(t) { $('#toast').textContent = t; $('#toast').style.display = 'block'; clearTimeout(window.toastTimer); window.toastTimer = setTimeout(() => $('#toast').style.display = 'none', 4200) }
 function go(r) { if (location.hash === '#' + r) render(); else location.hash = r }
 function intro(title, sub, action = '') { return `<div class="intro"><div><div class="eyebrow">Votre atelier, bien organisé</div><h1>${title}</h1><p>${sub}</p></div>${action}</div>` }
-function rows(list) {
-    if (!list.length) return '<div class="empty">Aucun document ici pour le moment.</div>';
-    return list.map(d => `
-        <div class="doc-row">
-            <div class="doc-identity">
-                <span class="doc-type-icon" aria-hidden="true">${d.type === 'devis' ? '▤' : '▧'}</span>
-                <div><strong>${esc(client(d).name)}</strong>
-                <small>${esc(d.id)} · ${fmt(d.date)}</small>
-                <small>${esc(d.job)}</small></div>
-            </div>
-            <div class="doc-status"><span class="badge ${d.type === 'devis' ? 'quote' : d.paid ? 'paid' : 'pending'}">${d.type === 'devis' ? 'Devis en attente' : d.paid ? 'Payée' : 'À payer'}</span></div>
-            <div class="amount">${euro(totals(d).total)}</div>
-            <button class="row-open" onclick="go('view/${d.id}')" aria-label="Voir ${esc(d.id)}">Voir <span aria-hidden="true">↗</span></button>
-        </div>`).join('');
-}
-
-function home() {
-    const unpaid = docs.filter(d => d.type === 'facture' && !d.paid);
-    const paid = docs.filter(d => d.type === 'facture' && d.paid);
-    const quotes = docs.filter(d => d.type === 'devis');
-    const name = account?.user_metadata?.display_name?.trim()?.split(/\s+/)[0];
-    return `
-        <section class="home-hero">
-            <div class="hero-copy">
-                <span class="eyebrow">Votre atelier, bien organisé</span>
-                <h1>Bonjour${name ? ' ' + esc(name) : ''}<span class="terracotta">.</span></h1>
-                <p>Prêt pour une nouvelle journée ?</p>
-            </div>
-            <div class="hero-art" aria-hidden="true">
-                <span>Plomberie &amp; chauffage</span>
-                <svg viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M88 51h174a8 8 0 0 1 8 8v76a8 8 0 0 1-8 8H88a8 8 0 0 1-8-8V59a8 8 0 0 1 8-8Z"/>
-                        <path d="M103 62v70m25-70v70m25-70v70m25-70v70m25-70v70m25-70v70m25-70v70"/>
-                        <path d="M80 72H49V37h-24m55 87H49v25H25m245-77h23V37h22m-45 87h23v25h22"/>
-                        <circle cx="26" cy="37" r="5"/><circle cx="26" cy="149" r="5"/>
-                    </g>
-                </svg>
-            </div>
-        </section>
-        <div class="actions">
-            <button class="action-card main" onclick="start('facture')">
-                <span class="action-icon" aria-hidden="true">▧</span>
-                <span><strong>Créer une facture</strong><small>Les travaux sont terminés ?</small></span>
-                <span class="arrow" aria-hidden="true">→</span>
-            </button>
-            <button class="action-card" onclick="start('devis')">
-                <span class="action-icon" aria-hidden="true">▤</span>
-                <span><strong>Créer un devis</strong><small>Préparez votre prochain chantier.</small></span>
-                <span class="arrow" aria-hidden="true">→</span>
-            </button>
-        </div>
-        ${draft ? '<div class="notice">Vous avez un document en cours. <button class="link" onclick="go(\'wizard\')">Reprendre mon brouillon</button></div>' : ''}
-        <div class="stats">
-            <button class="stat stat-unpaid" onclick="go('payments')">
-                <span class="stat-icon" aria-hidden="true">€</span>
-                <span class="stat-content"><span>À encaisser</span><strong>${euro(unpaid.reduce((sum, d) => sum + totals(d).total, 0))}</strong>
-                <small>${unpaid.length} facture(s) en attente</small></span><span class="stat-arrow" aria-hidden="true">›</span>
-            </button>
-            <button class="stat stat-paid" onclick="go('payments')">
-                <span class="stat-icon" aria-hidden="true">✓</span>
-                <span class="stat-content"><span>Factures payées</span><strong>${euro(paid.reduce((sum, d) => sum + totals(d).total, 0))}</strong>
-                <small>${paid.length} facture(s) encaissée(s)</small></span><span class="stat-arrow" aria-hidden="true">›</span>
-            </button>
-            <button class="stat stat-quotes" onclick="filter='devis';go('docs')">
-                <span class="stat-icon" aria-hidden="true">▤</span>
-                <span class="stat-content"><span>Devis en attente</span><strong>${quotes.length}</strong>
-                <small>À confirmer avec vos clients</small></span><span class="stat-arrow" aria-hidden="true">›</span>
-            </button>
-        </div>
-        <div class="recent-panel">
-            <div class="section-head"><h2>Derniers documents</h2><a class="link" href="#docs">Voir tous les documents →</a></div>
-            <div class="panel">${rows(docs.slice(0, 5))}</div>
-        </div>
-        <div class="bottom-note"><b>ⓘ</b><span>Vos documents sont enregistrés dans votre compte. Vérifiez les mentions et les taux de TVA avant une utilisation professionnelle.</span></div>`;
-}
+function rows(list) { return list.length ? list.map(d => `<div class="doc-row"><div><strong>${esc(client(d).name)}</strong><small>${esc(d.id)} · ${fmt(d.date)}</small><small>${esc(d.job)}</small></div><div class="doc-status"><span class="badge ${d.type === 'devis' ? 'quote' : d.paid ? 'paid' : 'pending'}">${d.type === 'devis' ? 'Devis à confirmer' : d.paid ? 'Payée' : 'À payer'}</span></div><div class="amount">${euro(totals(d).total)}</div><button onclick="go('view/${d.id}')">Voir <span aria-hidden="true">↗</span></button></div>`).join('') : '<div class="empty">Aucun document ici pour le moment.</div>' }
+function home() { const unpaid = docs.filter(d => d.type === 'facture' && !d.paid), paid = docs.filter(d => d.type === 'facture' && d.paid); return `${intro('Bonjour, bienvenue chez vous.', 'Qu’est-ce qu’on fait aujourd’hui ?', `<span class="date">${new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`)}<div class="actions"><button class="action-card main" onclick="start('facture')"><span class="action-icon" aria-hidden="true">+</span><span><strong>Nouvelle facture</strong><small>Les travaux sont terminés ?</small></span><span class="arrow" aria-hidden="true">→</span></button><button class="action-card" onclick="start('devis')"><span class="action-icon" aria-hidden="true">▤</span><span><strong>Nouveau devis</strong><small>Préparez votre prochain chantier.</small></span><span class="arrow" aria-hidden="true">→</span></button></div>${draft ? '<div class="notice">Vous avez un document en cours. <button class="link" onclick="go(\'wizard\')">Reprendre mon brouillon</button></div>' : ''}<div class="stats"><div class="stat"><span>Il reste à recevoir</span><strong>${euro(unpaid.reduce((s, d) => s + totals(d).total, 0))}</strong><small>${unpaid.length} facture(s) à payer</small></div><div class="stat"><span>Déjà encaissé</span><strong>${euro(paid.reduce((s, d) => s + totals(d).total, 0))}</strong><small>Sur vos factures</small></div><div class="stat"><span>Devis en attente</span><strong>${docs.filter(d => d.type === 'devis').length}</strong><small>À confirmer avec vos clients</small></div></div><div class="section-head"><h2>Vos derniers documents</h2><a class="link" href="#docs">Voir tous les documents →</a></div><div class="panel">${rows(docs.slice(0, 3))}</div><div class="bottom-note"><b>ⓘ</b><span>Vos documents sont enregistrés dans votre compte. Vérifiez les mentions et les taux de TVA avant une utilisation professionnelle.</span></div>` }
 function start(type) { if (draft) { go('wizard'); toast('Votre brouillon est toujours là. Terminez-le ou utilisez « Abandonner ce brouillon ».'); return } draft = { type, client: null, date: today(), due: today(), job: '', lines: [] }; step = 1; go('wizard') }
-function wizard() { if (!draft) return home(); return `${intro(draft.type === 'devis' ? 'Préparer mon devis' : 'Créer ma facture', 'Prenons les choses dans l’ordre.')}<div class="steps">${['Le client', 'Les travaux', 'Vérifier'].map((s, i) => `<div class="step ${step === i + 1 ? 'active' : ''}" ${step === i + 1 ? 'aria-current="step"' : ''}><b>${i + 1}</b>${s}</div>`).join('')}</div><div class="panel">${step === 1 ? `<h2>Pour quel client ?</h2><div class="client-grid">${clients.map(c => `<button class="client-card ${draft.client === c.id ? 'selected' : ''}" aria-pressed="${draft.client === c.id}" onclick="draft.client='${c.id}';render()"><strong>${esc(c.name)}</strong><small>${esc(c.address).replace(/\n/g, '<br>')}</small></button>`).join('')}</div><button class="link" style="margin-top:20px" onclick="returnToWizard=true;go('newclient')">+ Ajouter un nouveau client</button><div class="form-footer"><a href="#home" class="link">Retour à l’accueil</a><button class="primary" onclick="next()">Continuer vers les travaux →</button></div>` : step === 2 ? `<h2>Quels travaux avez-vous réalisés ?</h2><label class="field">Nom du chantier ou des travaux<input id="job" value="${esc(draft.job)}" placeholder="Ex. Entretien de chaudière" oninput="draft.job=this.value"></label><label class="field">Adresse du chantier (si différente)<input value="${esc(draft.site || '')}" placeholder="Facultatif" oninput="draft.site=this.value"></label><p class="muted">Ajoutez une prestation, puis adaptez la quantité et le prix.</p><div class="catalog">${catalog.map((c, i) => `<button onclick="addLine(${i})">+ ${c[0]}</button>`).join('')}<button onclick="addLine(-1)">+ Autre prestation</button></div>${draft.lines.map((l, i) => `<div class="line-item"><label>Prestation<input aria-label="Prestation ${i + 1}" value="${esc(l.name)}" oninput="updateLine(${i},'name',this.value)"></label><label>Quantité<input aria-label="Quantité ${i + 1}" type="number" min="0.01" step="0.01" value="${l.qty}" oninput="updateLine(${i},'qty',this.value)"></label><label>Prix HTVA (€)<input aria-label="Prix ${i + 1}" type="number" min="0" step="0.01" value="${l.price}" oninput="updateLine(${i},'price',this.value)"></label><label>TVA<select aria-label="TVA ${i + 1}" onchange="updateLine(${i},'tax',this.value)">${[0, 6, 12, 21].map(t => `<option ${t === l.tax ? 'selected' : ''} value="${t}">${t} %</option>`).join('')}</select></label><button aria-label="Retirer la prestation ${i + 1}" onclick="draft.lines.splice(${i},1);render()">Retirer</button></div>`).join('') || '<div class="empty">Choisissez une prestation ci-dessus pour commencer.</div>'}<div id="totals">${totalBlock(draft)}</div><div class="notice">Les taux proposés sont indicatifs. Le taux applicable et les mentions nécessaires doivent être validés avant toute utilisation réelle.</div><div class="form-grid"><label class="field">Date du document<input type="date" value="${draft.date}" onchange="draft.date=this.value"></label><label class="field">${draft.type === 'devis' ? 'Devis valable jusqu’au' : 'À payer pour le'}<input type="date" value="${draft.due}" onchange="draft.due=this.value"></label></div><div class="form-footer"><button onclick="step=1;render()">← Le client</button><button class="primary" onclick="next()">Vérifier mon document →</button></div>` : `<h2>Tout est correct ?</h2><p>Relisez votre document avant de l’enregistrer.</p><div class="review-actions"><button type="button" onclick="step=2;render();window.scrollTo(0,0)">✎ Modifier ${draft.type === 'devis' ? 'le devis' : 'la facture'}</button><button type="button" onclick="step=1;render();window.scrollTo(0,0)">Changer de client</button></div>${documentHTML({ ...draft, id: 'Numéro attribué à l’enregistrement' })}<div class="form-footer"><button onclick="step=2;render()">← Modifier les travaux</button><button class="primary" onclick="saveDraft()">Enregistrer ${draft.type === 'devis' ? 'mon devis' : 'ma facture'}</button></div>`}<p id="error" class="error" role="alert"></p></div><button class="link muted" style="margin-top:20px" onclick="if(confirm('Abandonner ce brouillon et revenir à l’accueil ?')){draft=null;go('home')}">Abandonner ce brouillon</button>` }
+function wizard() { if (!draft) return home(); return `${intro(draft.type === 'devis' ? 'Préparer mon devis' : 'Créer ma facture', 'Prenons les choses dans l’ordre.')}<div class="steps">${['Le client', 'Les travaux', 'Vérifier'].map((s, i) => `<div class="step ${step === i + 1 ? 'active' : ''}" ${step === i + 1 ? 'aria-current="step"' : ''}><b>${i + 1}</b>${s}</div>`).join('')}</div><div class="panel">${step === 1 ? `<h2>Pour quel client ?</h2><div class="client-grid">${clients.map(c => `<button class="client-card ${draft.client === c.id ? 'selected' : ''}" aria-pressed="${draft.client === c.id}" onclick="draft.client='${c.id}';render()"><strong>${esc(c.name)}</strong><small>${esc(c.address).replace(/\n/g, '<br>')}</small></button>`).join('')}</div><button class="link" style="margin-top:20px" onclick="returnToWizard=true;go('newclient')">+ Ajouter un nouveau client</button><div class="form-footer"><a href="#home" class="link">Retour à l’accueil</a><button class="primary" onclick="next()">Continuer vers les travaux →</button></div>` : step === 2 ? `<h2>Quels travaux avez-vous réalisés ?</h2><label class="field">Nom du chantier ou des travaux<input id="job" value="${esc(draft.job)}" placeholder="Ex. Entretien de chaudière" oninput="draft.job=this.value"></label><label class="field">Adresse du chantier (si différente)<input value="${esc(draft.site || '')}" placeholder="Facultatif" oninput="draft.site=this.value"></label><p class="muted">Ajoutez une prestation, puis adaptez la quantité et le prix.</p><div class="catalog">${catalog.map((c, i) => `<button onclick="addLine(${i})">+ ${c[0]}</button>`).join('')}<button onclick="addLine(-1)">+ Autre prestation</button></div>${draft.lines.map((l, i) => `<div class="line-item"><label>Prestation<input aria-label="Prestation ${i + 1}" value="${esc(l.name)}" oninput="updateLine(${i},'name',this.value)"></label><label>Quantité<input aria-label="Quantité ${i + 1}" type="number" min="0.01" step="0.01" value="${l.qty}" oninput="updateLine(${i},'qty',this.value)"></label><label>Prix HTVA (€)<input aria-label="Prix ${i + 1}" type="number" min="0" step="0.01" value="${l.price}" oninput="updateLine(${i},'price',this.value)"></label><label>TVA<select aria-label="TVA ${i + 1}" onchange="updateLine(${i},'tax',this.value)">${[0, 6, 12, 21].map(t => `<option ${t === l.tax ? 'selected' : ''} value="${t}">${t} %</option>`).join('')}</select></label><button aria-label="Retirer la prestation ${i + 1}" onclick="draft.lines.splice(${i},1);render()">Retirer</button></div>`).join('') || '<div class="empty">Choisissez une prestation ci-dessus pour commencer.</div>'}<div id="totals">${totalBlock(draft)}</div><div class="notice">Les taux proposés sont indicatifs. Le taux applicable et les mentions nécessaires doivent être validés avant toute utilisation réelle.</div><div class="form-grid"><label class="field">Date du document<input type="date" value="${draft.date}" onchange="draft.date=this.value"></label><label class="field">${draft.type === 'devis' ? 'Devis valable jusqu’au' : 'À payer pour le'}<input type="date" value="${draft.due}" onchange="draft.due=this.value"></label></div><div class="form-footer"><button onclick="step=1;render()">← Le client</button><button class="primary" onclick="next()">Vérifier mon document →</button></div>` : `<h2>Tout est correct ?</h2><p>Relisez votre document avant de l’enregistrer.</p>${documentHTML({ ...draft, id: 'Numéro attribué à l’enregistrement' })}<div class="form-footer"><button onclick="step=2;render()">← Modifier les travaux</button><button class="primary" onclick="saveDraft()">Enregistrer ${draft.type === 'devis' ? 'mon devis' : 'ma facture'}</button></div>`}<p id="error" class="error" role="alert"></p></div><button class="link muted" style="margin-top:20px" onclick="if(confirm('Abandonner ce brouillon et revenir à l’accueil ?')){draft=null;go('home')}">Abandonner ce brouillon</button>` }
 function totalBlock(d) { const t = totals(d); return `<div class="total"><div><span>Total hors TVA</span><span>${euro(t.net)}</span></div><div><span>TVA</span><span>${euro(t.tax)}</span></div><div class="grand"><span>Total à payer</span><span>${euro(t.total)}</span></div></div>` }
 function addLine(i) { const c = i < 0 ? ['', 1, 0] : catalog[i]; draft.lines.push({ name: c[0], qty: c[1], price: c[2], tax: 21 }); render() }
 function updateLine(i, k, v) { draft.lines[i][k] = k === 'name' ? v : (v === '' ? NaN : Number(v)); $('#totals').innerHTML = totalBlock(draft) }
@@ -103,51 +29,15 @@ function documentHTML(d) { const c = d.customer || client(d), biz = d.issuer || 
 function view(id) { const d = docs.find(d => d.id === id); if (!d) return intro('Document introuvable', 'Retrouvez vos documents depuis le menu.'); return `<div class="no-print">${intro(d.type === 'devis' ? 'Votre devis' : 'Votre facture', `${esc(client(d).name)} · ${esc(d.id)}`)}<div class="filter-row"><button onclick="go('docs')">← Mes documents</button><button class="primary" onclick="window.print()">Imprimer / PDF</button>${d.type === 'devis' ? `<button onclick="convert('${d.id}')">Transformer en facture</button>` : `<button onclick="togglePaid('${d.id}')">${d.paid ? 'Annuler le paiement' : 'Marquer comme payée'}</button>`}</div><p class="muted">Pour télécharger un PDF, choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.</p></div>${documentHTML(d)}` }
 async function convert(id) { const d = docs.find(d => d.id === id); if (!d || busy) return; if (d.converted) { go('view/' + d.converted); return } busy = true; try { const n = await persistDocument({ ...structuredClone(d), id: newId('facture'), type: 'facture', paid: false, date: today(), due: today() }, d.dbId); n.convertedFrom = d.dbId; d.converted = n.id; docs.unshift(n); go('view/' + n.id); toast('Devis transformé en facture.') } catch (error) { showError(error); await loadData().catch(showError) } finally { busy = false } }
 async function togglePaid(id) { const d = docs.find(d => d.id === id); if (!d || busy) return; busy = true; try { const paid = !d.paid; const { error } = await db.from('documents').update({ paid }).eq('id', d.dbId).eq('user_id', account.id); if (error) throw error; d.paid = paid; render(); toast(paid ? 'Paiement noté.' : 'Paiement annulé.') } catch (error) { showError(error) } finally { busy = false } }
-function clientsView() { return `${intro('Mes clients', 'Retrouvez leurs coordonnées en un coup d’œil.', '<button class="primary" onclick="returnToWizard=false;go(\'newclient\')">+ Ajouter un client</button>')}<div class="client-grid">${clients.map(c => `<div class="panel"><h2>${esc(c.name)}</h2><p class="muted">${esc(c.address).replace(/\n/g, '<br>')}<br>${esc(c.email)}</p><div class="client-actions"><button onclick="startForClient('${c.id}')">Créer une facture</button><button onclick="go('editclient/${c.id}')">Modifier</button></div></div>`).join('')}</div>` }
+function clientsView() { return `${intro('Mes clients', 'Retrouvez leurs coordonnées en un coup d’œil.', '<button class="primary" onclick="returnToWizard=false;go(\'newclient\')">+ Ajouter un client</button>')}<div class="client-grid">${clients.map(c => `<div class="panel"><h2>${esc(c.name)}</h2><p class="muted">${esc(c.address).replace(/\n/g, '<br>')}<br>${esc(c.email)}</p><button onclick="startForClient('${c.id}')">Créer une facture</button></div>`).join('')}</div>` }
 function startForClient(id) { if (draft) { go('wizard'); toast('Terminez ou abandonnez votre brouillon en cours.'); return } start('facture'); draft.client = id; render() }
 function newClient() { return `${intro('Ajouter un client', 'Les informations utiles, tout simplement.')}<form class="panel" id="clientform"><label class="field">Nom du client<input name="name" autocomplete="name" required></label><label class="field">Adresse complète<textarea name="address" autocomplete="street-address" required></textarea></label><label class="field">Adresse e-mail (facultatif)<input name="email" type="email" autocomplete="email"></label><div class="form-footer"><button type="button" onclick="go(returnToWizard?'wizard':'clients')">← Retour</button><button class="primary" type="submit">Enregistrer le client</button></div></form>` }
-function editClient(id) {
-    const c = clients.find(item => item.id === id);
-    if (!c) return intro('Client introuvable', 'Retrouvez vos clients depuis le menu.');
-    return `${intro('Modifier le client', 'Corrigez ses coordonnées pour vos prochains documents.')}
-        <form class="panel" id="editclientform" data-client-id="${c.id}">
-            <label class="field">Nom du client<input name="name" autocomplete="name" required value="${esc(c.name)}"></label>
-            <label class="field">Adresse complète<textarea name="address" autocomplete="street-address" required>${esc(c.address)}</textarea></label>
-            <label class="field">Adresse e-mail (facultatif)<input name="email" type="email" autocomplete="email" value="${esc(c.email)}"></label>
-            <div class="notice">Les documents déjà enregistrés conservent les coordonnées du client au moment de leur création.</div>
-            <div class="form-footer"><button type="button" onclick="go('clients')">← Retour</button>
-                <button class="primary" type="submit">Enregistrer les modifications</button></div>
-        </form>`;
-}
 function companyView() { return `${intro('Mon entreprise', 'Ces coordonnées apparaissent sur vos nouveaux documents.')}<form id="companyform" class="panel"><label class="field">Nom de l’entreprise<input name="name" required value="${esc(company.name)}"></label><label class="field">Adresse<textarea name="address" required>${esc(company.address)}</textarea></label><div class="form-grid"><label class="field">Numéro de TVA<input name="vat" value="${esc(company.vat)}"></label><label class="field">Compte bancaire IBAN<input name="iban" value="${esc(company.iban)}"></label></div><label class="field">Adresse e-mail<input name="email" type="email" value="${esc(company.email)}"></label><div class="notice">Les coordonnées sont enregistrées dans votre compte et copiées sur chaque nouveau document.</div><button class="primary">Enregistrer mes coordonnées</button></form>` }
 function render() {
     if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; return }
     $('#logout').hidden = false;
-    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route || (route.startsWith('view') && a.dataset.nav === 'docs'))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
+    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route || (route.startsWith('view') && a.dataset.nav === 'docs'))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
     if ($('#clientform')) $('#clientform').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), name = f.get('name').trim(), address = f.get('address').trim(); if (!name || !address) { toast('Complétez le nom et l’adresse du client.'); return } saveClient({ name, address, email: f.get('email').trim() }).then(c => { clients.push(c); if (returnToWizard && draft) { draft.client = c.id; go('wizard') } else go('clients'); toast('Client enregistré.') }).catch(showError) };
-    if ($('#editclientform')) $('#editclientform').onsubmit = async event => {
-        event.preventDefault();
-        const form = event.target;
-        const button = form.querySelector('[type="submit"]');
-        const values = new FormData(form);
-        const updated = {
-            name: String(values.get('name')).trim(),
-            address: String(values.get('address')).trim(),
-            email: String(values.get('email')).trim()
-        };
-        if (!updated.name || !updated.address || button.disabled) return;
-        button.disabled = true;
-        try {
-            const saved = await updateClient(form.dataset.clientId, updated);
-            const index = clients.findIndex(c => c.id === saved.id);
-            if (index !== -1) clients[index] = saved;
-            go('clients');
-            toast('Client modifié.');
-        } catch (error) {
-            showError(error);
-            button.disabled = false;
-        }
-    };
     if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = values; toast('Coordonnées enregistrées.') }).catch(showError) };
 }
 window.addEventListener('hashchange', () => {
@@ -193,16 +83,6 @@ function showError(error) {
 async function saveClient({ name, address, email }) {
     const { data, error } = await db.from('clients')
         .insert({ user_id: account.id, name, address, email: email || null })
-        .select('id,name,address,email').single();
-    if (error) throw error;
-    return data;
-}
-
-async function updateClient(id, { name, address, email }) {
-    const { data, error } = await db.from('clients')
-        .update({ name, address, email: email || null })
-        .eq('id', id)
-        .eq('user_id', account.id)
         .select('id,name,address,email').single();
     if (error) throw error;
     return data;
