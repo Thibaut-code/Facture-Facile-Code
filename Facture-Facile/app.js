@@ -29,15 +29,51 @@ function documentHTML(d) { const c = d.customer || client(d), biz = d.issuer || 
 function view(id) { const d = docs.find(d => d.id === id); if (!d) return intro('Document introuvable', 'Retrouvez vos documents depuis le menu.'); return `<div class="no-print">${intro(d.type === 'devis' ? 'Votre devis' : 'Votre facture', `${esc(client(d).name)} · ${esc(d.id)}`)}<div class="filter-row"><button onclick="go('docs')">← Mes documents</button><button class="primary" onclick="window.print()">Imprimer / PDF</button>${d.type === 'devis' ? `<button onclick="convert('${d.id}')">Transformer en facture</button>` : `<button onclick="togglePaid('${d.id}')">${d.paid ? 'Annuler le paiement' : 'Marquer comme payée'}</button>`}</div><p class="muted">Pour télécharger un PDF, choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.</p></div>${documentHTML(d)}` }
 async function convert(id) { const d = docs.find(d => d.id === id); if (!d || busy) return; if (d.converted) { go('view/' + d.converted); return } busy = true; try { const n = await persistDocument({ ...structuredClone(d), id: newId('facture'), type: 'facture', paid: false, date: today(), due: today() }, d.dbId); n.convertedFrom = d.dbId; d.converted = n.id; docs.unshift(n); go('view/' + n.id); toast('Devis transformé en facture.') } catch (error) { showError(error); await loadData().catch(showError) } finally { busy = false } }
 async function togglePaid(id) { const d = docs.find(d => d.id === id); if (!d || busy) return; busy = true; try { const paid = !d.paid; const { error } = await db.from('documents').update({ paid }).eq('id', d.dbId).eq('user_id', account.id); if (error) throw error; d.paid = paid; render(); toast(paid ? 'Paiement noté.' : 'Paiement annulé.') } catch (error) { showError(error) } finally { busy = false } }
-function clientsView() { return `${intro('Mes clients', 'Retrouvez leurs coordonnées en un coup d’œil.', '<button class="primary" onclick="returnToWizard=false;go(\'newclient\')">+ Ajouter un client</button>')}<div class="client-grid">${clients.map(c => `<div class="panel"><h2>${esc(c.name)}</h2><p class="muted">${esc(c.address).replace(/\n/g, '<br>')}<br>${esc(c.email)}</p><button onclick="startForClient('${c.id}')">Créer une facture</button></div>`).join('')}</div>` }
+function clientsView() { return `${intro('Mes clients', 'Retrouvez leurs coordonnées en un coup d’œil.', '<button class="primary" onclick="returnToWizard=false;go(\'newclient\')">+ Ajouter un client</button>')}<div class="client-grid">${clients.map(c => `<div class="panel"><h2>${esc(c.name)}</h2><p class="muted">${esc(c.address).replace(/\n/g, '<br>')}<br>${esc(c.email)}</p><div class="client-actions"><button onclick="startForClient('${c.id}')">Créer une facture</button><button onclick="go('editclient/${c.id}')">Modifier</button></div></div>`).join('')}</div>` }
 function startForClient(id) { if (draft) { go('wizard'); toast('Terminez ou abandonnez votre brouillon en cours.'); return } start('facture'); draft.client = id; render() }
 function newClient() { return `${intro('Ajouter un client', 'Les informations utiles, tout simplement.')}<form class="panel" id="clientform"><label class="field">Nom du client<input name="name" autocomplete="name" required></label><label class="field">Adresse complète<textarea name="address" autocomplete="street-address" required></textarea></label><label class="field">Adresse e-mail (facultatif)<input name="email" type="email" autocomplete="email"></label><div class="form-footer"><button type="button" onclick="go(returnToWizard?'wizard':'clients')">← Retour</button><button class="primary" type="submit">Enregistrer le client</button></div></form>` }
+function editClient(id) {
+    const c = clients.find(item => item.id === id);
+    if (!c) return intro('Client introuvable', 'Retrouvez vos clients depuis le menu.');
+    return `${intro('Modifier le client', 'Corrigez ses coordonnées pour vos prochains documents.')}
+        <form class="panel" id="editclientform" data-client-id="${c.id}">
+            <label class="field">Nom du client<input name="name" autocomplete="name" required value="${esc(c.name)}"></label>
+            <label class="field">Adresse complète<textarea name="address" autocomplete="street-address" required>${esc(c.address)}</textarea></label>
+            <label class="field">Adresse e-mail (facultatif)<input name="email" type="email" autocomplete="email" value="${esc(c.email)}"></label>
+            <div class="notice">Les documents déjà enregistrés conservent les coordonnées du client au moment de leur création.</div>
+            <div class="form-footer"><button type="button" onclick="go('clients')">← Retour</button>
+                <button class="primary" type="submit">Enregistrer les modifications</button></div>
+        </form>`;
+}
 function companyView() { return `${intro('Mon entreprise', 'Ces coordonnées apparaissent sur vos nouveaux documents.')}<form id="companyform" class="panel"><label class="field">Nom de l’entreprise<input name="name" required value="${esc(company.name)}"></label><label class="field">Adresse<textarea name="address" required>${esc(company.address)}</textarea></label><div class="form-grid"><label class="field">Numéro de TVA<input name="vat" value="${esc(company.vat)}"></label><label class="field">Compte bancaire IBAN<input name="iban" value="${esc(company.iban)}"></label></div><label class="field">Adresse e-mail<input name="email" type="email" value="${esc(company.email)}"></label><div class="notice">Les coordonnées sont enregistrées dans votre compte et copiées sur chaque nouveau document.</div><button class="primary">Enregistrer mes coordonnées</button></form>` }
 function render() {
     if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; return }
     $('#logout').hidden = false;
-    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route || (route.startsWith('view') && a.dataset.nav === 'docs'))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
+    const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route || (route.startsWith('view') && a.dataset.nav === 'docs'))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
     if ($('#clientform')) $('#clientform').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), name = f.get('name').trim(), address = f.get('address').trim(); if (!name || !address) { toast('Complétez le nom et l’adresse du client.'); return } saveClient({ name, address, email: f.get('email').trim() }).then(c => { clients.push(c); if (returnToWizard && draft) { draft.client = c.id; go('wizard') } else go('clients'); toast('Client enregistré.') }).catch(showError) };
+    if ($('#editclientform')) $('#editclientform').onsubmit = async event => {
+        event.preventDefault();
+        const form = event.target;
+        const button = form.querySelector('[type="submit"]');
+        const values = new FormData(form);
+        const updated = {
+            name: String(values.get('name')).trim(),
+            address: String(values.get('address')).trim(),
+            email: String(values.get('email')).trim()
+        };
+        if (!updated.name || !updated.address || button.disabled) return;
+        button.disabled = true;
+        try {
+            const saved = await updateClient(form.dataset.clientId, updated);
+            const index = clients.findIndex(c => c.id === saved.id);
+            if (index !== -1) clients[index] = saved;
+            go('clients');
+            toast('Client modifié.');
+        } catch (error) {
+            showError(error);
+            button.disabled = false;
+        }
+    };
     if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = values; toast('Coordonnées enregistrées.') }).catch(showError) };
 }
 window.addEventListener('hashchange', () => {
@@ -83,6 +119,16 @@ function showError(error) {
 async function saveClient({ name, address, email }) {
     const { data, error } = await db.from('clients')
         .insert({ user_id: account.id, name, address, email: email || null })
+        .select('id,name,address,email').single();
+    if (error) throw error;
+    return data;
+}
+
+async function updateClient(id, { name, address, email }) {
+    const { data, error } = await db.from('clients')
+        .update({ name, address, email: email || null })
+        .eq('id', id)
+        .eq('user_id', account.id)
         .select('id,name,address,email').single();
     if (error) throw error;
     return data;
