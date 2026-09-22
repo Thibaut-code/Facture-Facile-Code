@@ -1,7 +1,73 @@
 const $ = s => document.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), euro = n => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR' }).format(n), today = () => new Date().toISOString().slice(0, 10), fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-BE');
 let clients = [];
 let company = { name: '', address: '', vat: '', iban: '', email: '' };
-const catalog = [['Entretien de chaudière', 1, 145], ['Main-d’œuvre (heure)', 1, 55], ['Déplacement', 1, 35], ['Réparation de fuite', 1, 85], ['Robinet mitigeur', 1, 95]];
+const THEMES = {
+    plombier: {
+        label: 'Plomberie & chauffage', image: 'radiateur.png',
+        tagline: 'Des factures qui coulent de source',
+        footer: 'Plomberie<br>Chauffage<br>Confiance au quotidien',
+        catalog: [['Entretien de chaudière', 1, 145], ['Main-d’œuvre (heure)', 1, 55], ['Déplacement', 1, 35], ['Réparation de fuite', 1, 85], ['Robinet mitigeur', 1, 95]]
+    },
+    jardinier: {
+        label: 'Jardinage', image: 'theme-jardinier.png',
+        tagline: 'Votre métier prend racine ici',
+        footer: 'Jardinage<br>Élagage<br>Le soin du vivant',
+        catalog: [['Entretien de jardin', 1, 120], ['Taille de haies', 1, 95], ['Élagage', 1, 180], ['Déplacement', 1, 35], ['Main-d’œuvre (heure)', 1, 55]]
+    },
+    electricien: {
+        label: 'Électricité', image: 'theme-electricien.png',
+        tagline: 'Des devis qui donnent de l’élan',
+        footer: 'Électricité<br>Installation<br>Confiance au quotidien',
+        catalog: [['Dépannage électrique', 1, 95], ['Installation de prise', 1, 75], ['Pose de luminaire', 1, 85], ['Déplacement', 1, 35], ['Main-d’œuvre (heure)', 1, 55]]
+    },
+    peintre: {
+        label: 'Peinture', image: 'theme-peintre.png',
+        tagline: 'La touche juste pour chaque chantier',
+        footer: 'Peinture<br>Rénovation<br>Le goût du détail',
+        catalog: [['Préparation des surfaces', 1, 120], ['Peinture intérieure (m²)', 1, 25], ['Peinture extérieure (m²)', 1, 35], ['Déplacement', 1, 35], ['Main-d’œuvre (heure)', 1, 55]]
+    },
+    menuisier: {
+        label: 'Menuiserie', image: 'theme-menuisier.png',
+        tagline: 'Des projets taillés sur mesure',
+        footer: 'Menuiserie<br>Agencement<br>Le sens du détail',
+        catalog: [['Fabrication sur mesure', 1, 350], ['Pose de menuiserie', 1, 180], ['Réparation de porte', 1, 95], ['Déplacement', 1, 35], ['Main-d’œuvre (heure)', 1, 55]]
+    }
+};
+let themeChoice = 'plombier';
+let themeColumnReady = false;
+const catalogForTheme = () => THEMES[themeChoice].catalog;
+
+function themeStorageKey() { return `facture-facile-theme:${account.id}`; }
+function localTheme() {
+    try { return window.localStorage.getItem(themeStorageKey()); }
+    catch { return null; }
+}
+function applyTheme(key) {
+    themeChoice = Object.hasOwn(THEMES, key) ? key : 'plombier';
+    document.documentElement.dataset.theme = themeChoice;
+    const theme = THEMES[themeChoice];
+    $('#themelabel').textContent = theme.label;
+    $('#brandtagline').textContent = theme.tagline;
+    $('#sidefoottrades').innerHTML = theme.footer;
+    document.querySelectorAll('.theme-option').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.theme === themeChoice));
+    });
+}
+async function chooseTheme(key) {
+    if (!account || !Object.hasOwn(THEMES, key)) return;
+    applyTheme(key);
+    try { window.localStorage.setItem(themeStorageKey(), key); }
+    catch { /* Supabase reste la source si le stockage local est indisponible. */ }
+    $('#themedialog').close();
+    render();
+    if (themeColumnReady && company.name) {
+        const { error } = await db.from('companies').update({ theme: key })
+            .eq('user_id', account.id);
+        if (error) showError(error);
+    }
+    toast(`Thème « ${THEMES[key].label} » sélectionné.`);
+}
+
 let docs = [];
 let account = null;
 let db = null;
@@ -57,7 +123,7 @@ function home() {
                 <span class="hero-underline" aria-hidden="true"></span>
             </div>
             <div class="hero-art" aria-hidden="true">
-                <img src="radiateur.png" alt="">
+                <img src="${THEMES[themeChoice].image}" alt="">
             </div>
         </section>
         <div class="actions">
@@ -91,9 +157,9 @@ function home() {
         <div class="bottom-note"><b>ⓘ</b><span>Vos documents sont enregistrés dans votre compte. Vérifiez les mentions et les taux de TVA avant une utilisation professionnelle.</span></div>`;
 }
 function start(type) { if (draft) { go('wizard'); toast('Votre brouillon est toujours là. Terminez-le ou utilisez « Abandonner ce brouillon ».'); return } draft = { type, client: null, date: today(), due: today(), job: '', lines: [] }; step = 1; go('wizard') }
-function wizard() { if (!draft) return home(); return `${intro(draft.type === 'devis' ? 'Préparer mon devis' : 'Créer ma facture', 'Prenons les choses dans l’ordre.')}<div class="steps">${['Le client', 'Les travaux', 'Vérifier'].map((s, i) => `<div class="step ${step === i + 1 ? 'active' : ''}" ${step === i + 1 ? 'aria-current="step"' : ''}><b>${i + 1}</b>${s}</div>`).join('')}</div><div class="panel">${step === 1 ? `<h2>Pour quel client ?</h2><div class="client-grid">${clients.map(c => `<button class="client-card ${draft.client === c.id ? 'selected' : ''}" aria-pressed="${draft.client === c.id}" onclick="draft.client='${c.id}';render()"><strong>${esc(c.name)}</strong><small>${esc(c.address).replace(/\n/g, '<br>')}</small></button>`).join('')}</div><button class="link" style="margin-top:20px" onclick="returnToWizard=true;go('newclient')">+ Ajouter un nouveau client</button><div class="form-footer"><a href="#home" class="link">Retour à l’accueil</a><button class="primary" onclick="next()">Continuer vers les travaux →</button></div>` : step === 2 ? `<h2>Quels travaux avez-vous réalisés ?</h2><label class="field">Nom du chantier ou des travaux<input id="job" value="${esc(draft.job)}" placeholder="Ex. Entretien de chaudière" oninput="draft.job=this.value"></label><label class="field">Adresse du chantier (si différente)<input value="${esc(draft.site || '')}" placeholder="Facultatif" oninput="draft.site=this.value"></label><p class="muted">Ajoutez une prestation, puis adaptez la quantité et le prix.</p><div class="catalog">${catalog.map((c, i) => `<button onclick="addLine(${i})">+ ${c[0]}</button>`).join('')}<button onclick="addLine(-1)">+ Autre prestation</button></div>${draft.lines.map((l, i) => `<div class="line-item"><label>Prestation<input aria-label="Prestation ${i + 1}" value="${esc(l.name)}" oninput="updateLine(${i},'name',this.value)"></label><label>Quantité<input aria-label="Quantité ${i + 1}" type="number" min="0.01" step="0.01" value="${l.qty}" oninput="updateLine(${i},'qty',this.value)"></label><label>Prix HTVA (€)<input aria-label="Prix ${i + 1}" type="number" min="0" step="0.01" value="${l.price}" oninput="updateLine(${i},'price',this.value)"></label><label>TVA<select aria-label="TVA ${i + 1}" onchange="updateLine(${i},'tax',this.value)">${[0, 6, 12, 21].map(t => `<option ${t === l.tax ? 'selected' : ''} value="${t}">${t} %</option>`).join('')}</select></label><button aria-label="Retirer la prestation ${i + 1}" onclick="draft.lines.splice(${i},1);render()">Retirer</button></div>`).join('') || '<div class="empty">Choisissez une prestation ci-dessus pour commencer.</div>'}<div id="totals">${totalBlock(draft)}</div><div class="notice">Les taux proposés sont indicatifs. Le taux applicable et les mentions nécessaires doivent être validés avant toute utilisation réelle.</div><div class="form-grid"><label class="field">Date du document<input type="date" value="${draft.date}" onchange="draft.date=this.value"></label><label class="field">${draft.type === 'devis' ? 'Devis valable jusqu’au' : 'À payer pour le'}<input type="date" value="${draft.due}" onchange="draft.due=this.value"></label></div><div class="form-footer"><button onclick="step=1;render()">← Le client</button><button class="primary" onclick="next()">Vérifier mon document →</button></div>` : `<h2>Tout est correct ?</h2><p>Relisez votre document avant de l’enregistrer.</p><div class="review-actions"><button type="button" onclick="step=2;render();window.scrollTo(0,0)">✎ Modifier ${draft.type === 'devis' ? 'le devis' : 'la facture'}</button><button type="button" onclick="step=1;render();window.scrollTo(0,0)">Changer de client</button></div>${documentHTML({ ...draft, id: 'Numéro attribué à l’enregistrement' })}<div class="form-footer"><button onclick="step=2;render()">← Modifier les travaux</button><button class="primary" onclick="saveDraft()">Enregistrer ${draft.type === 'devis' ? 'mon devis' : 'ma facture'}</button></div>`}<p id="error" class="error" role="alert"></p></div><button class="link muted" style="margin-top:20px" onclick="if(confirm('Abandonner ce brouillon et revenir à l’accueil ?')){draft=null;go('home')}">Abandonner ce brouillon</button>` }
+function wizard() { if (!draft) return home(); return `${intro(draft.type === 'devis' ? 'Préparer mon devis' : 'Créer ma facture', 'Prenons les choses dans l’ordre.')}<div class="steps">${['Le client', 'Les travaux', 'Vérifier'].map((s, i) => `<div class="step ${step === i + 1 ? 'active' : ''}" ${step === i + 1 ? 'aria-current="step"' : ''}><b>${i + 1}</b>${s}</div>`).join('')}</div><div class="panel">${step === 1 ? `<h2>Pour quel client ?</h2><div class="client-grid">${clients.map(c => `<button class="client-card ${draft.client === c.id ? 'selected' : ''}" aria-pressed="${draft.client === c.id}" onclick="draft.client='${c.id}';render()"><strong>${esc(c.name)}</strong><small>${esc(c.address).replace(/\n/g, '<br>')}</small></button>`).join('')}</div><button class="link" style="margin-top:20px" onclick="returnToWizard=true;go('newclient')">+ Ajouter un nouveau client</button><div class="form-footer"><a href="#home" class="link">Retour à l’accueil</a><button class="primary" onclick="next()">Continuer vers les travaux →</button></div>` : step === 2 ? `<h2>Quels travaux avez-vous réalisés ?</h2><label class="field">Nom du chantier ou des travaux<input id="job" value="${esc(draft.job)}" placeholder="Ex. Entretien de chaudière" oninput="draft.job=this.value"></label><label class="field">Adresse du chantier (si différente)<input value="${esc(draft.site || '')}" placeholder="Facultatif" oninput="draft.site=this.value"></label><p class="muted">Ajoutez une prestation, puis adaptez la quantité et le prix.</p><div class="catalog">${catalogForTheme().map((c, i) => `<button onclick="addLine(${i})">+ ${c[0]}</button>`).join('')}<button onclick="addLine(-1)">+ Autre prestation</button></div>${draft.lines.map((l, i) => `<div class="line-item"><label>Prestation<input aria-label="Prestation ${i + 1}" value="${esc(l.name)}" oninput="updateLine(${i},'name',this.value)"></label><label>Quantité<input aria-label="Quantité ${i + 1}" type="number" min="0.01" step="0.01" value="${l.qty}" oninput="updateLine(${i},'qty',this.value)"></label><label>Prix HTVA (€)<input aria-label="Prix ${i + 1}" type="number" min="0" step="0.01" value="${l.price}" oninput="updateLine(${i},'price',this.value)"></label><label>TVA<select aria-label="TVA ${i + 1}" onchange="updateLine(${i},'tax',this.value)">${[0, 6, 12, 21].map(t => `<option ${t === l.tax ? 'selected' : ''} value="${t}">${t} %</option>`).join('')}</select></label><button aria-label="Retirer la prestation ${i + 1}" onclick="draft.lines.splice(${i},1);render()">Retirer</button></div>`).join('') || '<div class="empty">Choisissez une prestation ci-dessus pour commencer.</div>'}<div id="totals">${totalBlock(draft)}</div><div class="notice">Les taux proposés sont indicatifs. Le taux applicable et les mentions nécessaires doivent être validés avant toute utilisation réelle.</div><div class="form-grid"><label class="field">Date du document<input type="date" value="${draft.date}" onchange="draft.date=this.value"></label><label class="field">${draft.type === 'devis' ? 'Devis valable jusqu’au' : 'À payer pour le'}<input type="date" value="${draft.due}" onchange="draft.due=this.value"></label></div><div class="form-footer"><button onclick="step=1;render()">← Le client</button><button class="primary" onclick="next()">Vérifier mon document →</button></div>` : `<h2>Tout est correct ?</h2><p>Relisez votre document avant de l’enregistrer.</p><div class="review-actions"><button type="button" onclick="step=2;render();window.scrollTo(0,0)">✎ Modifier ${draft.type === 'devis' ? 'le devis' : 'la facture'}</button><button type="button" onclick="step=1;render();window.scrollTo(0,0)">Changer de client</button></div>${documentHTML({ ...draft, id: 'Numéro attribué à l’enregistrement' })}<div class="form-footer"><button onclick="step=2;render()">← Modifier les travaux</button><button class="primary" onclick="saveDraft()">Enregistrer ${draft.type === 'devis' ? 'mon devis' : 'ma facture'}</button></div>`}<p id="error" class="error" role="alert"></p></div><button class="link muted" style="margin-top:20px" onclick="if(confirm('Abandonner ce brouillon et revenir à l’accueil ?')){draft=null;go('home')}">Abandonner ce brouillon</button>` }
 function totalBlock(d) { const t = totals(d); return `<div class="total"><div><span>Total hors TVA</span><span>${euro(t.net)}</span></div><div><span>TVA</span><span>${euro(t.tax)}</span></div><div class="grand"><span>Total à payer</span><span>${euro(t.total)}</span></div></div>` }
-function addLine(i) { const c = i < 0 ? ['', 1, 0] : catalog[i]; draft.lines.push({ name: c[0], qty: c[1], price: c[2], tax: 21 }); render() }
+function addLine(i) { const c = i < 0 ? ['', 1, 0] : catalogForTheme()[i]; draft.lines.push({ name: c[0], qty: c[1], price: c[2], tax: 21 }); render() }
 function updateLine(i, k, v) { draft.lines[i][k] = k === 'name' ? v : (v === '' ? NaN : Number(v)); $('#totals').innerHTML = totalBlock(draft) }
 function next() { let msg = ''; if (step === 1 && !draft.client) msg = 'Choisissez un client pour continuer.'; if (step === 2) { if (!draft.job.trim()) msg = 'Indiquez le nom des travaux.'; else if (!draft.lines.length || draft.lines.some(l => !l.name.trim() || !Number.isFinite(l.qty) || l.qty <= 0 || !Number.isFinite(l.price) || l.price < 0)) msg = 'Ajoutez au moins une prestation avec un nom, une quantité positive et un prix valide.'; else if (!draft.date || !draft.due || draft.due < draft.date) msg = 'Choisissez des dates valides : la date limite doit être égale ou postérieure à la date du document.' } if (msg) { $('#error').textContent = msg; return } step++; render(); window.scrollTo(0, 0) }
 function newId(type) { const p = type === 'devis' ? 'D' : 'F', year = new Date().getFullYear(); let n = 1; while (docs.some(d => d.id === `${p}-${year}-${String(n).padStart(3, '0')}`)) n++; return `${p}-${year}-${String(n).padStart(3, '0')}` }
@@ -120,8 +186,9 @@ function editClient(id) {
 }
 function companyView() { return `${intro('Mon entreprise', 'Ces coordonnées apparaissent sur vos nouveaux documents.')}<form id="companyform" class="panel"><label class="field">Nom de l’entreprise<input name="name" required value="${esc(company.name)}"></label><label class="field">Adresse<textarea name="address" required>${esc(company.address)}</textarea></label><div class="form-grid"><label class="field">Numéro de TVA<input name="vat" value="${esc(company.vat)}"></label><label class="field">Compte bancaire IBAN<input name="iban" value="${esc(company.iban)}"></label></div><label class="field">Adresse e-mail<input name="email" type="email" value="${esc(company.email)}"></label><div class="notice">Les coordonnées sont enregistrées dans votre compte et copiées sur chaque nouveau document.</div><button class="primary">Enregistrer mes coordonnées</button></form>` }
 function render() {
-    if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; return }
+    if (!account) { $('#main').innerHTML = authHTML(); $('#logout').hidden = true; $('#themebutton').hidden = true; return }
     $('#logout').hidden = false;
+    $('#themebutton').hidden = false;
     $('#headerdate').textContent = new Date().toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     $('#accountname').textContent = company.name?.trim() || 'Mon entreprise';
     const route = location.hash.slice(1) || 'home'; document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route && (!a.dataset.filter || a.dataset.filter === filter))); let html; if (route === 'wizard') html = wizard(); else if (route === 'clients') html = clientsView(); else if (route === 'newclient') html = newClient(); else if (route.startsWith('editclient/')) html = editClient(route.slice(11)); else if (route === 'company') html = companyView(); else if (route.startsWith('view/')) html = view(route.slice(5)); else if (route === 'docs') html = `${intro('Devis et factures', 'Tous vos documents, au même endroit.')}<div class="filter-row">${[['all', 'Tous'], ['facture', 'Factures'], ['devis', 'Devis']].map(([v, l]) => `<button class="${filter === v ? 'active' : ''}" onclick="filter='${v}';render()">${l}</button>`).join('')}</div><div class="panel">${rows(docs.filter(d => filter === 'all' || d.type === filter))}</div>`; else if (route === 'payments') html = `${intro('Qui doit encore me payer ?', 'Ouvrez une facture pour noter son paiement.')}<div class="panel">${rows(docs.filter(d => d.type === 'facture' && !d.paid))}</div><div class="section-head" style="margin-top:30px"><h2>Factures payées</h2></div><div class="panel">${rows(docs.filter(d => d.type === 'facture' && d.paid))}</div>`; else html = home(); $('#main').innerHTML = html;
@@ -149,7 +216,7 @@ function render() {
             button.disabled = false;
         }
     };
-    if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = values; $('#accountname').textContent = company.name.trim(); toast('Coordonnées enregistrées.') }).catch(showError) };
+    if ($('#companyform')) $('#companyform').onsubmit = e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.target)); if (!values.name.trim() || !values.address.trim()) { toast('Complétez le nom et l’adresse.'); return } saveCompany(values).then(() => { company = { ...values, theme: themeChoice }; $('#accountname').textContent = company.name.trim(); toast('Coordonnées enregistrées.') }).catch(showError) };
 }
 window.addEventListener('hashchange', () => {
     render();
@@ -157,6 +224,7 @@ window.addEventListener('hashchange', () => {
     window.scrollTo(0, 0);
 });
 $('#help').onclick = () => $('#helpdialog').showModal();
+$('#themebutton').onclick = () => $('#themedialog').showModal();
 $('#logout').onclick = async () => {
     const { error } = await db.auth.signOut();
     if (error) showError(error);
@@ -217,6 +285,9 @@ async function saveCompany(values) {
         email: values.email?.trim() || null, updated_at: new Date().toISOString()
     });
     if (error) throw error;
+    const themeUpdate = await db.from('companies').update({ theme: themeChoice }).eq('user_id', account.id);
+    if (!themeUpdate.error) themeColumnReady = true;
+    else if (!['42703', 'PGRST204'].includes(themeUpdate.error.code)) console.error(themeUpdate.error);
 }
 
 function readDocument(row, lines) {
@@ -236,7 +307,7 @@ async function loadData() {
     const userId = account.id;
     const [clientResult, companyResult, documentResult, lineResult] = await Promise.all([
         db.from('clients').select('id,name,address,email').eq('user_id', userId).order('created_at'),
-        db.from('companies').select('name,address,vat,iban,email').eq('user_id', userId).maybeSingle(),
+        db.from('companies').select('*').eq('user_id', userId).maybeSingle(),
         db.from('documents').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         db.from('document_lines').select('*').eq('user_id', userId).order('position')
     ]);
@@ -246,6 +317,8 @@ async function loadData() {
     if (account?.id !== userId) return;
     clients = clientResult.data || [];
     company = companyResult.data || { name: '', address: '', vat: '', iban: '', email: '' };
+    themeColumnReady = Object.hasOwn(company, 'theme');
+    applyTheme(themeColumnReady ? company.theme : localTheme());
     docs = (documentResult.data || []).map(row => readDocument(row, lineResult.data || []));
     for (const doc of docs) {
         const converted = docs.find(other => other.convertedFrom === doc.dbId);
@@ -294,6 +367,8 @@ async function initialize() {
         account = session?.user || null;
         clients = []; docs = [];
         company = { name: '', address: '', vat: '', iban: '', email: '' };
+        themeColumnReady = false;
+        applyTheme(account ? localTheme() : 'plombier');
         draft = null;
         render();
         if (account) loadData().catch(error => {
@@ -304,6 +379,7 @@ async function initialize() {
     if (error) showError(error);
     if (data?.session?.user && !account) {
         account = data.session.user;
+        applyTheme(localTheme());
         await loadData().catch(showError);
     }
     render();

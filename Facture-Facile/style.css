@@ -337,3 +337,46 @@ main { max-width: 1640px; padding: 0 clamp(28px, 3vw, 55px) 60px; }
 @media (max-width: 760px) {
   .home-hero h1 { font-size: clamp(2.3rem,8vw,3rem); }
 }
+/* Illustration seule, sans phrases manuscrites */
+.hero-art { display: flex; align-items: center; justify-content: flex-end; }
+.hero-art img { flex: none; width: 100%; height: 100%; object-fit: contain; object-position: right center; }
+@media (max-width: 900px) { .hero-art { display: none; } }
+
+/* Choix du métier : le thème plomberie conserve intégralement ses styles existants. */
+#themebutton { display: inline-flex; align-items: center; gap: .45rem; white-space: nowrap; border: 1px solid var(--line); padding: 8px 12px; }
+#themebutton[hidden] { display: none; }
+.theme-current { color: var(--green); font-weight: 700; }
+#themedialog { width: min(680px, calc(100% - 26px)); max-height: min(90vh, 850px); overflow: auto; border: 1px solid var(--line); border-radius: 18px; padding: 28px; color: var(--ink); background: var(--warm-white); box-shadow: 0 25px 80px #152a2640; }
+#themedialog::backdrop { background: #14221db3; }
+#themedialog h2 { margin-bottom: 6px; }
+#themedialog > p { color: var(--muted); margin-bottom: 22px; }
+.theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+.theme-option { display: grid; grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 12px; text-align: left; min-height: 94px; padding: 14px; border: 1px solid var(--line); background: white; }
+.theme-option:hover { background: var(--canvas); }
+.theme-option[aria-pressed="true"] { border: 2px solid var(--accent); background: var(--canvas); }
+.theme-option > span { grid-row: 1 / 3; font-size: 1.8rem; color: var(--accent); text-align: center; }
+.theme-option strong { font-size: .94rem; line-height: 1.2; }
+.theme-option small { font-size: .72rem; color: var(--muted); font-weight: 400; }
+
+:root[data-theme="jardinier"] { --green:#35543b; --green-dark:#263d2c; --ink:#263b2b; --muted:#647260; --line:#dce6d8; --canvas:#f8faf3; --accent:#aa6940; --warm-white:#fffef9; --focus:#a65b2c; --tint-1:#f8eee4; --tint-2:#eaf3e6; --tint-3:#f5f0df; }
+:root[data-theme="electricien"] { --green:#24455c; --green-dark:#173449; --ink:#203748; --muted:#60717c; --line:#dce5e9; --canvas:#f7fafb; --accent:#b57227; --warm-white:#fffefa; --focus:#a06018; --tint-1:#fdf1df; --tint-2:#e7f0f4; --tint-3:#f3f3e9; }
+:root[data-theme="peintre"] { --green:#62445c; --green-dark:#482f44; --ink:#443544; --muted:#786b76; --line:#e9dfe6; --canvas:#fcf8fa; --accent:#bf6759; --warm-white:#fffdfd; --focus:#a04e45; --tint-1:#fbedec; --tint-2:#f2e9f0; --tint-3:#faf1e8; }
+:root[data-theme="menuisier"] { --green:#514632; --green-dark:#392e24; --ink:#382f28; --muted:#726b5f; --line:#e6e0d4; --canvas:#faf8f2; --accent:#a65b35; --warm-white:#fffdf8; --focus:#96532a; --tint-1:#f8ece0; --tint-2:#edf1e6; --tint-3:#f6f0df; }
+:root[data-theme]:not([data-theme="plombier"]) aside { background: linear-gradient(170deg, var(--green), var(--green-dark)); }
+:root[data-theme]:not([data-theme="plombier"]) .primary,
+:root[data-theme]:not([data-theme="plombier"]) .action-card.main { background: var(--accent); border-color: var(--accent); }
+:root[data-theme]:not([data-theme="plombier"]) .primary:hover,
+:root[data-theme]:not([data-theme="plombier"]) .action-card.main:hover { filter: brightness(.88); }
+:root[data-theme]:not([data-theme="plombier"]) .stat-unpaid { background: var(--tint-1); }
+:root[data-theme]:not([data-theme="plombier"]) .stat-paid { background: var(--tint-2); }
+:root[data-theme]:not([data-theme="plombier"]) .stat-quotes { background: var(--tint-3); }
+:root[data-theme]:not([data-theme="plombier"]) .eyebrow,
+:root[data-theme]:not([data-theme="plombier"]) .terracotta,
+:root[data-theme]:not([data-theme="plombier"]) .recent-panel .section-head .link { color: var(--accent); }
+:root[data-theme]:not([data-theme="plombier"]) .document th,
+:root[data-theme]:not([data-theme="plombier"]) .home-table th { background: var(--tint-2); }
+:root[data-theme]:not([data-theme="plombier"]) .client-card.selected,
+:root[data-theme]:not([data-theme="plombier"]) .notice { background: var(--tint-1); }
+@media (max-width:1100px) { .header-actions { gap: 10px; } #themebutton { font-size: .76rem; } }
+@media (max-width:760px) { .header-actions { gap: 5px; } #themebutton { font-size: 0; min-height: 40px; padding: 5px 7px; } #themebutton .theme-current { font-size: .68rem; max-width: 105px; overflow: hidden; text-overflow: ellipsis; } .theme-options { grid-template-columns: 1fr; } #themedialog { padding: 20px; } }
+@media print { #themedialog { display: none !important; } }
