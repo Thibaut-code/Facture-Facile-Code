@@ -4,4 +4,3 @@
 .auth-panel { max-width: 560px; margin: 2rem auto; }
 .auth-panel .field { margin-bottom: 1.25rem; }
 .auth-panel #authmessage { min-height: 1.5em; }
-.client-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
